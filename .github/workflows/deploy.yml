@@ -1,8 +1,15 @@
 name: Deploy (Flex) — ECC Orchestrator
+
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
+
+# 🔑 REQUIRED for OIDC (this is why your run failed)
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
