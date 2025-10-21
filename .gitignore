@@ -1,0 +1,10 @@
+node_modules/
+bin/
+obj/
+dist/
+.local/
+.vscode/
+*.log
+local.settings.json
+.DS_Store
+Thumbs.db
