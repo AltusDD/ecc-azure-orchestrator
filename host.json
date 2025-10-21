@@ -4,7 +4,7 @@
     "durableTask": {
       "hubName": "ECCOrchestrations",
       "storageProvider": {
-        "type": "mssql" 
+        "type": "azureStorage"
       }
     }
   }

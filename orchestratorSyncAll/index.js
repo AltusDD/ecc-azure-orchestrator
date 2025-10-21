@@ -1,20 +1,21 @@
 import df from "durable-functions";
 
-export default df.orchestrator(function* (context) {
+const orchestrator = df.orchestrator(function* (context) {
   const input = context.df.getInput() || {};
-  const since = input.since || process.env.DEFAULT_SINCE;
+  const throttleMs = input.throttleMs || 200;
 
-  // Core entities first (order matters for FKs)
-  yield context.df.callActivity("act_properties", { since });
-  yield context.df.callActivity("act_units", { since });
-  yield context.df.callActivity("act_tenants", { since });
-  yield context.df.callActivity("act_leases", { since });
+  // Run activities in order (you can make these parallel later if needed)
+  yield context.df.callActivity("act_properties", input);
+  yield context.df.callActivity("act_units", input);
+  yield context.df.callActivity("act_tenants", input);
+  yield context.df.callActivity("act_leases", input);
+  yield context.df.callActivity("act_lease_tenants", input);
+  yield context.df.callActivity("act_financials", input);
 
-  // Junctions depend on both leases & tenants
-  yield context.df.callActivity("act_lease_tenants", { since });
+  // small pacing pause (optional)
+  yield context.df.createTimer(new Date(context.df.currentUtcDateTime.getTime() + throttleMs));
 
-  // Financials (payments, charges, credits)
-  yield context.df.callActivity("act_financials", { since });
-
-  return { ok: true, since, ts: new Date().toISOString() };
+  return { ok: true, ran: ["properties","units","tenants","leases","lease_tenants","financials"] };
 });
+
+export default orchestrator;

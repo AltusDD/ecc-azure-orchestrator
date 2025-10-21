@@ -5,8 +5,7 @@
       "type": "httpTrigger",
       "direction": "in",
       "name": "req",
-      "methods": [ "get", "post" ],
-      "route": "syncall"
+      "methods": [ "post", "get" ]
     },
     {
       "type": "http",
@@ -15,8 +14,8 @@
     },
     {
       "type": "orchestrationClient",
-      "name": "starter",
-      "direction": "in"
+      "direction": "in",
+      "name": "starter"
     }
   ]
 }

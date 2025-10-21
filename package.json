@@ -1,17 +1,14 @@
 {
   "name": "ecc-azure-orchestrator",
-  "version": "1.0.0",
   "private": true,
+  "version": "1.0.0",
   "type": "module",
-  "scripts": {
-    "build": "echo 'no build step for js'",
-    "start": "func start"
-  },
+  "engines": { "node": ">=20" },
   "dependencies": {
     "durable-functions": "^3.2.0",
     "node-fetch": "^3.3.2"
   },
-  "devDependencies": {
-    "archiver": "^7.0.1"
+  "scripts": {
+    "start": "func start"
   }
 }
