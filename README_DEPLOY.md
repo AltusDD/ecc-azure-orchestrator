@@ -1,1 +1,0 @@
-# Orchestrator Patch\n\nUnzip into repo root, commit, push to main. Azure Deployment Center (GitHub) will deploy to empirecommandcenter-altus-node-staging. After deploy, Functions → syncall → Get Function URL and copy with ?code=...\n

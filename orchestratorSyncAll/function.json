@@ -1,9 +1,0 @@
-<<<<<<< HEAD
-{
-  "bindings": [
-    { "name": "context", "type": "orchestrationTrigger", "direction": "in" }
-  ]
-}
-=======
-{ "bindings":[{"name":"context","type":"orchestrationTrigger","direction":"in"}] }
->>>>>>> 5e7f44317567773cddf703c3b33650a11240aeb2
