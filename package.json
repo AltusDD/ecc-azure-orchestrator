@@ -1,4 +1,5 @@
 {
+<<<<<<< HEAD
   "name": "ecc-azure-orchestrator",
   "private": true,
   "version": "1.0.0",
@@ -11,4 +12,13 @@
   "scripts": {
     "start": "func start"
   }
+=======
+  "name":"ecc-azure-orchestrator",
+  "private":true,
+  "version":"1.0.0",
+  "type":"module",
+  "engines":{"node":">=20"},
+  "dependencies":{"durable-functions":"^3.2.0","node-fetch":"^3.3.2"},
+  "scripts":{"start":"func start"}
+>>>>>>> 5e7f44317567773cddf703c3b33650a11240aeb2
 }

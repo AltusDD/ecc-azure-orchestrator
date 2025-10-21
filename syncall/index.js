@@ -1,4 +1,5 @@
 import df from "durable-functions";
+<<<<<<< HEAD
 
 export default async function (context, req) {
   const client = df.getClient(context);
@@ -21,3 +22,6 @@ export default async function (context, req) {
     }
   };
 }
+=======
+export default async function (context, req) { const client = df.getClient(context); const input = { since: process.env.DEFAULT_SINCE||null, throttleMs: Number(process.env.THROTTLE_MS||200)}; const id = await client.startNew("orchestratorSyncAll", undefined, input); return client.createCheckStatusResponse(req, id);}
+>>>>>>> 5e7f44317567773cddf703c3b33650a11240aeb2
