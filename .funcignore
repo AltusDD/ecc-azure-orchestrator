@@ -1,9 +1,0 @@
-local.settings.json
-test/
-tests/
-.vscode/
-**/*.map
-**/*.test.*
-**/__mocks__/**
-**/__tests__/**
-docs/
