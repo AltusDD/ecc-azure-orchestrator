@@ -1,11 +1,13 @@
-name: Deploy (Flex) — ECC Orchestrator (Publish Profile Zip)
+name: Deploy (Flex) — ECC Orchestrator (AZ CLI Zip)
 
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
 
+# OIDC for Azure CLI
 permissions:
+  id-token: write
   contents: read
 
 jobs:
@@ -21,7 +23,7 @@ jobs:
         with:
           node-version: '20'
 
-      # Create a clean zip with the functions app (root must contain host.json, package.json, and function folders)
+      # Build a clean zip of the function app contents (root must contain host.json/package.json/function folders)
       - name: Build zip
         run: |
           set -e
@@ -29,11 +31,34 @@ jobs:
           zip -r out/functionapp.zip . \
             -x ".git/*" ".github/*" "node_modules/*" "*.log" "local.settings.json"
 
-      # Deploy using your publish profile secret (bypasses Flex OneDeploy quirks)
-      - name: Deploy to Azure Functions (Publish Profile)
-        uses: Azure/functions-action@v1
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
         with:
-          app-name: empirecommandcenter-altus-node-staging
-          package: out/functionapp.zip
-          publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
-          remote-build: false
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # Ensure the webapp extension is present (az webapp deploy lives here)
+      - name: Enable AZ 'webapp' extension
+        run: |
+          set -e
+          az extension add -n webapp --yes || az extension update -n webapp
+
+      # Deploy the zip directly with Azure CLI (works on Flex)
+      - name: Deploy with AZ CLI (zip)
+        run: |
+          set -e
+          az webapp deploy \
+            --resource-group empirecommandcenter-altus-staging_group \
+            --name empirecommandcenter-altus-node-staging \
+            --type zip \
+            --src-path out/functionapp.zip \
+            --async false
+
+      # Optional: show site info for quick sanity
+      - name: Show site info
+        run: |
+          az webapp show \
+            --resource-group empirecommandcenter-altus-staging_group \
+            --name empirecommandcenter-altus-node-staging \
+            --query "{state: state, host: defaultHostName}" -o tsv
