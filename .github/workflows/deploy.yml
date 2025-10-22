@@ -1,12 +1,12 @@
-name: Deploy (Flex) — ECC Orchestrator
+name: Deploy (Flex) — ECC Orchestrator (Publish Profile)
 
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
 
+# Permissions not strictly required for publish-profile, but harmless to keep
 permissions:
-  id-token: write
   contents: read
 
 jobs:
@@ -21,16 +21,12 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Login to Azure (OIDC)
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Azure Functions Deploy (Flex)
+      # Deploy with publish profile (bypasses Flex OneDeploy storage config)
+      - name: Azure Functions Deploy (Publish Profile)
         uses: Azure/functions-action@v1
         with:
           app-name: empirecommandcenter-altus-node-staging
           package: .
+          publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
+          # Explicitly avoid remote build; not needed for JavaScript functions
           remote-build: false
