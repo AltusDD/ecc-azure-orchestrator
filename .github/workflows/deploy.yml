@@ -1,4 +1,4 @@
-name: Deploy (Flex) — ECC Orchestrator (Publish Profile, WebApps Deploy)
+name: Deploy (Flex) — ECC Orchestrator (Direct ZipDeploy)
 
 on:
   push:
@@ -12,18 +12,96 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
+      - name: Prepare ZIP (functions only)
+        run: |
+          set -e
+          mkdir -p out
+          # Create a clean zip of your function app (exclude git and workflows)
+          zip -r out/package.zip . -x ".git/*" ".github/*" "node_modules/*"
 
-      # Use WebApps Deploy with the publish profile (bypasses the OneDeploy/ZipDeploy quirks)
-      - name: Deploy via Publish Profile
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: empirecommandcenter-altus-node-staging
-          package: .
-          publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
+      - name: Extract Kudu creds from publish profile
+        id: pp
+        shell: bash
+        env:
+          PP: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
+        run: |
+          set -e
+          python3 - << 'PY'
+import os, xml.etree.ElementTree as ET, sys
+xml = os.environ.get('PP','').strip()
+if not xml:
+    print("::error::AZURE_FUNCTIONAPP_PUBLISH_PROFILE secret is empty"); sys.exit(1)
+root = ET.fromstring(xml)
+chosen = None
+for prof in root.findall('publishProfile'):
+    # Prefer ZipDeploy; fall back to MSDeploy if needed
+    if prof.attrib.get('publishMethod') == 'ZipDeploy':
+        chosen = prof; break
+if chosen is None:
+    # fallback: first profile
+    profs = root.findall('publishProfile')
+    if not profs:
+        print("::error::No <publishProfile> entries found in publish profile"); sys.exit(1)
+    chosen = profs[0]
+url  = chosen.attrib['publishUrl']                # e.g. <scm-host>:443
+user = chosen.attrib['userName']                  # $appname
+pwd  = chosen.attrib['userPWD']                   # password from profile
+# Normalize URL to https://<scm-host>
+if url.startswith("http"):
+    base = url
+else:
+    base = f"https://{url}"
+print(f"::notice title=ZipDeploy target::{base}/api/zipdeploy")
+print(f"ZIPDEPLOY_URL={base}/api/zipdeploy")
+print(f"KUDU_USER={user}")
+print(f"KUDU_PWD={pwd}")
+PY > /tmp/pp.out
+
+          # Export to GITHUB_OUTPUT
+          while IFS= read -r line; do
+            case "$line" in
+              ZIPDEPLOY_URL=*|KUDU_USER=*|KUDU_PWD=*)
+                echo "$line" >> "$GITHUB_OUTPUT"
+              ;;
+            esac
+          done < /tmp/pp.out
+
+      - name: Deploy via Kudu ZipDeploy (with retries)
+        shell: bash
+        env:
+          ZIPDEPLOY_URL: ${{ steps.pp.outputs.ZIPDEPLOY_URL }}
+          KUDU_USER: ${{ steps.pp.outputs.KUDU_USER }}
+          KUDU_PWD: ${{ steps.pp.outputs.KUDU_PWD }}
+        run: |
+          set -e
+          echo "Deploying to: $ZIPDEPLOY_URL"
+          # Try up to 5 times in case Kudu is warming
+          for i in 1 2 3 4 5; do
+            echo "Attempt $i..."
+            http_code=$(curl -sS -w "%{http_code}" -o /tmp/resp.json \
+              -u "$KUDU_USER:$KUDU_PWD" \
+              -H "Content-Type: application/zip" \
+              --data-binary @out/package.zip \
+              "$ZIPDEPLOY_URL" || true)
+
+            echo "HTTP $http_code"
+            if [ "$http_code" = "200" ] || [ "$http_code" = "202" ]; then
+              echo "ZipDeploy accepted."
+              break
+            fi
+
+            if [ $i -eq 5 ]; then
+              echo "::error::ZipDeploy failed with HTTP $http_code"
+              echo "Response:"
+              cat /tmp/resp.json || true
+              exit 1
+            fi
+
+            sleep 5
+          done
+
+      - name: Done
+        run: echo "Deployment completed."
