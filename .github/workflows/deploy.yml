@@ -5,7 +5,7 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
-# 🔑 REQUIRED for OIDC (this is why your run failed)
+# 🔑 Required for GitHub OIDC
 permissions:
   id-token: write
   contents: read
@@ -14,7 +14,8 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -28,9 +29,10 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+      # ZIP deploy to Flex (bypasses remote build + storage requirement)
       - name: Azure Functions Deploy (Flex)
         uses: Azure/functions-action@v1
         with:
           app-name: empirecommandcenter-altus-node-staging
           package: .
-          remote-build: true
+          remote-build: false
